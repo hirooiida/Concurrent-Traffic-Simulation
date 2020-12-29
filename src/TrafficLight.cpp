@@ -2,9 +2,6 @@
 #include <random>
 #include "TrafficLight.h"
 
-static int timeCnt = 0;
-const int cycleMSec = 5000;
-
 /* Implementation of class "MessageQueue" */
 
 template <typename T>
@@ -18,7 +15,8 @@ T MessageQueue<T>::receive()
     _cond.wait(uLock, [this] { return !_queue.empty(); });
 
     T msg = std::move(_queue.back());
-    _queue.pop_back();
+    // _queue.pop_back();
+    _queue.clear();
 
     return msg;
 }
@@ -39,6 +37,11 @@ void MessageQueue<T>::send(T &&msg)
 TrafficLight::TrafficLight()
 {
     _currentPhase = TrafficLightPhase::red;
+}
+
+TrafficLight::~TrafficLight()
+{
+    
 }
 
 void TrafficLight::waitForGreen()
@@ -69,6 +72,7 @@ void TrafficLight::simulate()
 }
 
 // virtual function which is executed in a thread
+
 void TrafficLight::cycleThroughPhases()
 {
     // FP.2a : Implement the function with an infinite loop that measures the time between two loop cycles 
@@ -76,9 +80,13 @@ void TrafficLight::cycleThroughPhases()
     // to the message queue using move semantics. The cycle duration should be a random value between 4 and 6 seconds. 
     // Also, the while-loop should use std::this_thread::sleep_for to wait 1ms between two cycles. 
     
+    int timeCnt = 0;
+    std::random_device rnd;
+    int cycleMSec = rnd() % 2000 + 4000;
+  
     while(true)
     {
-        if (++timeCnt == cycleMSec)
+        if (++timeCnt >= cycleMSec)
         {
             timeCnt = 0;
             if (_currentPhase == TrafficLightPhase::red)
@@ -86,10 +94,9 @@ void TrafficLight::cycleThroughPhases()
                 _currentPhase = TrafficLightPhase::green;
             } else {
                 _currentPhase = TrafficLightPhase::red;
-            }
+            } 
+            _messages.send(std::move(_currentPhase));
         }
-        
-        _messages.send(std::move(_currentPhase));
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
